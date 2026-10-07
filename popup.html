@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Anchor</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <header><img class="mark" src="icons/anchor.svg" alt=""><div><h1>Anchor</h1><p>Your pause. Your call.</p></div></header>
+  <main>
+    <div class="site"><span id="hostname">Loading…</span><span id="state" class="pill">Checking</span></div>
+    <label class="enable"><span>Protect this site</span><input id="enabled" type="checkbox" role="switch"></label>
+    <p id="permission" class="hint">Automatic protection for web video and audio players, including embedded players.</p>
+    <div class="actions"><button id="lock" class="primary">Keep paused</button><button id="play">Resume</button></div>
+    <p id="status" class="status" role="status">Checking the player…</p>
+    <fieldset id="options">
+      <legend>Playback preferences</legend>
+      <label><input id="fixKeyboard" type="checkbox"><span>Reliable keyboard controls<small>Space / K: pause or play · ← / →: seek 10 seconds</small></span></label>
+      <label><input id="blockAutoplay" type="checkbox"><span>Stop autoplay &amp; next episodes<small>Start playback manually. May also pause ad transitions.</small></span></label>
+      <label><input id="strictPause" type="checkbox"><span>Lock every pause<small>Stronger protection. Can interrupt player transitions.</small></span></label>
+      <label><input id="pauseWhenHidden" type="checkbox"><span>Pause when leaving this tab<small>Stays paused when you return.</small></span></label>
+    </fieldset>
+    <p id="error" class="error" role="alert" hidden></p>
+  </main>
+  <footer>Media keys work even when a text field is focused.<br><span id="shortcut">Checking shortcut…</span><br><a href="help.html" target="_blank">Setup &amp; troubleshooting</a></footer>
+  <script src="settings.js"></script><script src="popup.js"></script>
+</body>
+</html>
