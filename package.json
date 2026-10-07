@@ -1,6 +1,6 @@
 {
   "name": "anchor-streaming",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "Keep web streaming players paused until you choose to resume.",
   "license": "MIT",

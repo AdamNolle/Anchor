@@ -1,4 +1,10 @@
-# Anchor 1.2.0 validation
+# Anchor validation
+
+## Version 1.2.1 theme
+
+Verified the rendered popup and help page with black backgrounds, white controls, grayscale secondary text, checked controls, and the held-pause status. Manifest, assets, package versions, and JavaScript syntax pass validation. Playback code is unchanged from 1.2.0; the CI workflow runs the full suite for this update.
+
+## Version 1.2.0 browser baseline
 
 - **Windows / Chromium: 70 passing checks**, including three shortcut checks.
 - **Windows / Brave: 70 passing checks**, including three shortcut checks.

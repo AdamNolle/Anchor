@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- Apply a black-and-white theme to the popup, help page, buttons, controls, statuses, errors, and keyboard focus.
+
 ## 1.2.0
 
 - Add portable development dependencies and Windows/macOS/Linux browser CI.
