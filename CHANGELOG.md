@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.2
+
+- Disable protection on LinkedIn by default so feed videos do not capture typing shortcuts.
+- Preserve keyboard input in rich text editors, editor wrappers, shadow-root editors, and document editing mode.
+- Reset saved Hulu autoplay blocking and strict pause options once on upgrade so next episodes and source transitions can play normally. Clear old Hulu and LinkedIn pause holds during that reset.
+- Keep deliberate-pause protection and respect settings chosen after the compatibility reset.
+- Add LinkedIn typing and Hulu episode-transition regression coverage.
+
 ## 1.2.1
 
 - Apply a black-and-white theme to the popup, help page, buttons, controls, statuses, errors, and keyboard focus.

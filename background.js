@@ -3,6 +3,28 @@ const S = PauseKeeperSettings;
 let queue = Promise.resolve();
 const serialized = (fn) => { const next = queue.then(fn, fn); queue = next.catch(() => {}); return next; };
 const iconCache = new Map();
+let compatibilityReady = null;
+
+function migrateCompatibility() {
+  if (!compatibilityReady) compatibilityReady = (async () => {
+    const { compatibilityVersion = 0, sites = {} } = await chrome.storage.local.get(['compatibilityVersion', 'sites']);
+    if (compatibilityVersion >= 1) return;
+    // Older Hulu settings treated episode transitions as deliberate pauses.
+    // Reset these once; subsequent choices in the popup remain user-controlled.
+    for (const [origin, config] of Object.entries(sites)) {
+      if (S.isHulu(origin)) sites[origin] = { ...config, strictPause: false, blockAutoplay: false };
+      if (S.isLinkedIn(origin)) sites[origin] = { ...config, enabled: false };
+    }
+    // Discard holds inherited from the old compatibility settings on upgrade.
+    const { tabLocks = {}, tabOrigins = {} } = await chrome.storage.session.get(['tabLocks', 'tabOrigins']);
+    for (const [tabId, origin] of Object.entries(tabOrigins)) {
+      if (S.isHulu(origin) || S.isLinkedIn(origin)) delete tabLocks[tabId];
+    }
+    await chrome.storage.session.set({ tabLocks });
+    await chrome.storage.local.set({ sites, compatibilityVersion: 1 });
+  })().catch(error => { compatibilityReady = null; throw error; });
+  return compatibilityReady;
+}
 
 async function updateAction(tabId, frames) {
   let tab;
@@ -33,6 +55,7 @@ async function recordFrame(sender, state) {
 }
 
 async function settingsFor(tab) {
+  await migrateCompatibility();
   const { sites = {} } = await chrome.storage.local.get('sites');
   return S.forOrigin(S.origin(tab.url), sites);
 }
@@ -92,6 +115,8 @@ async function resume(tabId) {
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   const extensionPage = sender.id === chrome.runtime.id && sender.url?.startsWith(chrome.runtime.getURL(''));
   (async () => {
+    // Upgrade settings and old holds before any message reads session state.
+    await migrateCompatibility();
     if (message.type === 'PK_SETTINGS' && sender.tab) {
       return serialized(async () => {
         const tab = await chrome.tabs.get(sender.tab.id);
@@ -187,6 +212,7 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
 });
 chrome.permissions.onRemoved.addListener(() => serialized(registerSites).catch(() => {}));
 async function initialize() {
+  await migrateCompatibility();
   await registerSites();
   iconCache.clear();
   for (const tab of await chrome.tabs.query({})) await updateAction(tab.id);

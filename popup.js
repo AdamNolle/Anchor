@@ -47,7 +47,9 @@ for (const command of ['lock', 'play']) $(command).addEventListener('click', asy
     const { sites = {} } = await chrome.storage.local.get('sites');
     const config = S.forOrigin(origin, sites);
     for (const id of ids) $(id).checked = config[id];
-    if (origin) $('permission').textContent = 'Automatic protection for web video and audio, including embedded players. Gray icon: no supported player or protection is off.';
+    if (origin) $('permission').textContent = S.isLinkedIn(origin)
+      ? 'LinkedIn protection is off by default to preserve typing and feed behavior. Enable it only if you need pause protection here.'
+      : 'Automatic protection for web video and audio, including embedded players. Gray icon: no supported player or protection is off.';
     controls(); await updateStatus();
   } catch (e) { failure(e.message); }
 })();

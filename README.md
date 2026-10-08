@@ -44,6 +44,8 @@ An optional quick-toggle shortcut can be assigned at `brave://extensions/shortcu
 
 **Lock every pause** catches unfamiliar controls but can interrupt buffering or player transitions. **Stop autoplay & next episodes** can also stop ad-to-content transitions. Both are off by default. If popup Resume hits browser autoplay restrictions after a reload, click the site's own Play button once.
 
+LinkedIn protection is off by default to preserve typing and feed behavior. You can enable it from the popup if needed. On the first update to 1.2.2, Anchor also turns off previously saved **Lock every pause** and **Stop autoplay & next episodes** preferences for Hulu and clears old Hulu/LinkedIn pause holds. This allows Hulu's next episodes and source transitions to play normally while keeping deliberate pauses protected. Settings you choose afterward remain in effect.
+
 ## Tests and development
 
 ```sh

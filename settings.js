@@ -5,8 +5,12 @@ globalThis.PauseKeeperSettings = {
     try { const u = new URL(origin); return u.protocol === 'https:' && (u.hostname === 'hulu.com' || u.hostname.endsWith('.hulu.com')); }
     catch { return false; }
   },
+  isLinkedIn(origin) {
+    try { const host = new URL(origin).hostname; return host === 'linkedin.com' || host.endsWith('.linkedin.com'); }
+    catch { return false; }
+  },
   forOrigin(origin, sites = {}) {
-    return { ...this.defaults, enabled: !!this.origin(origin), ...sites[origin] };
+    return { ...this.defaults, enabled: !!this.origin(origin) && !this.isLinkedIn(origin), ...sites[origin] };
   },
   origin(url) { try { const u = new URL(url); return /^https?:$/.test(u.protocol) ? u.origin : null; } catch { return null; } },
   pattern(origin) { return `${new URL(origin).protocol}//${new URL(origin).hostname}/*`; }

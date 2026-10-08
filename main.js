@@ -140,8 +140,18 @@
   };
 
   function path(event) { return event.composedPath ? event.composedPath() : [event.target]; }
+  function editable(el) {
+    return el instanceof Element && (el.matches('input,textarea,select,[role="textbox"],[role="searchbox"],[role="slider"],[role="combobox"],[role="menuitem"],[contenteditable]:not([contenteditable="false"]),[aria-multiline="true"],[data-lexical-editor],[data-slate-editor]') || el.isContentEditable);
+  }
   function typing(event) {
-    return path(event).some(el => el instanceof Element && (el.matches('input,textarea,select,[role="textbox"],[role="slider"],[role="combobox"],[role="menuitem"]') || el.isContentEditable));
+    if (path(event).some(editable)) return true;
+    if (event.type !== 'keydown' && event.type !== 'keyup') return false;
+    if (document.designMode.toLowerCase() === 'on') return true;
+    // Some editors retarget keyboard events to a wrapper or document body.
+    for (let focused = document.activeElement; focused; focused = focused.shadowRoot?.activeElement) {
+      if (editable(focused)) return true;
+    }
+    return false;
   }
   function controlAction(event) {
     for (const el of path(event)) {

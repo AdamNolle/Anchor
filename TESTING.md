@@ -1,5 +1,13 @@
 # Anchor validation
 
+## Version 1.2.2 compatibility
+
+The full suite passed **86 checks in Windows Chromium and 86 in Windows Brave**, including 16 new compatibility checks. Manifest, assets, package versions, and JavaScript syntax also passed validation.
+
+The new checks use intercepted LinkedIn and Hulu URLs with real HTML media. They cover saved-setting upgrades, clearing old pause holds, LinkedIn spaces and K in a custom editor, gray disabled icons, explicit site opt-in, rich text and shadow-root editors, Lexical/Slate editor wrappers, document editing mode, natural episode endings, programmatic pause/source transitions, intentional-pause protection, optional next-episode blocking, and preserving later user choices. They also check that the first settings request after an upgrade cannot restore an obsolete Hulu hold.
+
+These regressions establish behavior in controlled fixtures. This update has not been verified against LinkedIn's production editor or a complete live Hulu next-episode transition. Cross-platform CI runs the same suite; consult Actions for the results of this commit.
+
 ## Version 1.2.1 theme
 
 Verified the rendered popup and help page with black backgrounds, white controls, grayscale secondary text, checked controls, and the held-pause status. Manifest, assets, package versions, and JavaScript syntax pass validation. Playback code is unchanged from 1.2.0; the CI workflow runs the full suite for this update.
