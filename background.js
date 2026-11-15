@@ -131,7 +131,7 @@ async function registerSites() {
     try { await chrome.scripting.updateContentScripts(scripts.map(s => ({ ...s, matchOriginAsFallback: true, excludeMatches }))); return; }
     catch { /* Fall through to a fresh registration. */ }
   }
-  // Also remove the per-host registrations left by v1.0.
+  // Also remove the per-host registrations left by early development builds.
   const stale = existing.filter(s => s.id.startsWith('pk-') || SCRIPT_IDS.includes(s.id)).map(s => s.id);
   if (stale.length) await chrome.scripting.unregisterContentScripts({ ids: stale });
   // Degrade gracefully if a browser rejects an option or a pattern, instead of

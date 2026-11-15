@@ -9,7 +9,7 @@
 A browser extension that holds your pause until *you* press play, then gets out of the way for everything else.
 
 [![Browser tests](https://github.com/AdamNolle/Anchor/actions/workflows/test.yml/badge.svg)](https://github.com/AdamNolle/Anchor/actions/workflows/test.yml)
-![Version](https://img.shields.io/badge/version-1.3.0-000000)
+![Version](https://img.shields.io/badge/version-1.0.0-000000)
 ![Manifest V3](https://img.shields.io/badge/manifest-v3-000000)
 ![Chromium 119+](https://img.shields.io/badge/chromium-119%2B-000000)
 [![MIT License](https://img.shields.io/badge/license-MIT-000000)](LICENSE)
@@ -45,7 +45,7 @@ You pause a show to grab a drink. The player decides you didn't mean it: an ad e
 
 Anchor runs in desktop **Brave, Chrome, Edge, Vivaldi, Opera** and other Chromium browsers (version 119 or later) on Windows, macOS, Linux and ChromeOS.
 
-1. Download **`anchor-1.3.0.zip`** from the [latest release](https://github.com/AdamNolle/Anchor/releases/latest) and extract it to a folder you'll keep.
+1. Download **`anchor-1.0.0.zip`** from the [latest release](https://github.com/AdamNolle/Anchor/releases/latest) and extract it to a folder you'll keep.
 2. Open your browser's extensions page (`brave://extensions`, `chrome://extensions` or `edge://extensions`) and turn on **Developer mode**.
 3. Click **Load unpacked** and choose the extracted folder (the one containing `manifest.json`).
 4. Pin Anchor to your toolbar. Tabs you already have open are protected right away.

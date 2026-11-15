@@ -1,6 +1,6 @@
 # Anchor validation
 
-## Version 1.3.0 release
+## Version 1.0.0 release
 
 The full suite passes **108 checks in Windows Chromium on repeated consecutive runs**: playback 24, sites/frames 26, Media Session 10, shortcuts 3, hardening 7, compatibility 17 and the new release suite 21. `npm run check` also validates the manifest, versions, assets, page references, `pageKey` parity between the engine and settings, dynamic content-script registration, and JavaScript syntax.
 
@@ -47,7 +47,7 @@ Not verified live: Hulu, Netflix, Disney+, Max, Prime Video and Peacock, which r
 
 Existing suites were updated for `AbortError` rejections, the ignored-sites model, settings v2 migration (per-site switches become ignored entries; explicit social opt-ins are kept), and dynamic registration.
 
-## Version 1.2.2 compatibility
+## Development build 1.2.2 compatibility
 
 The full suite passed **86 checks in Windows Chromium and 86 in Windows Brave**, including 16 new compatibility checks. Manifest, assets, package versions, and JavaScript syntax also passed validation.
 
@@ -55,11 +55,11 @@ The new checks use intercepted LinkedIn and Hulu URLs with real HTML media. They
 
 These regressions establish behavior in controlled fixtures. This update has not been verified against LinkedIn's production editor or a complete live Hulu next-episode transition. Cross-platform CI runs the same suite; consult Actions for the results of this commit.
 
-## Version 1.2.1 theme
+## Development build 1.2.1 theme
 
 Verified the rendered popup and help page with black backgrounds, white controls, grayscale secondary text, checked controls, and the held-pause status. Manifest, assets, package versions, and JavaScript syntax pass validation. Playback code is unchanged from 1.2.0; the CI workflow runs the full suite for this update.
 
-## Version 1.2.0 browser baseline
+## Development build 1.2.0 browser baseline
 
 - **Windows / Chromium: 70 passing checks**, including three shortcut checks.
 - **Windows / Brave: 70 passing checks**, including three shortcut checks.

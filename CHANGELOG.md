@@ -1,12 +1,14 @@
 # Changelog
 
-## 1.3.0
+## 1.0.0 — first stable release
+
+The first published release. Development builds were numbered 1.1.0–1.2.2 before this; settings saved by them are migrated automatically.
 
 ### Ignored sites
 
 - Add an ignored-sites list. The popup's **Protect this site** switch ignores or restores the current site, and the new options page adds, validates and removes any site (hostnames, URLs or IPs, covering subdomains). It also lists and resets sites with custom preferences.
 - Ignored sites are excluded from content-script injection entirely. Content scripts are now registered dynamically, falling back gracefully if a browser rejects an option or pattern.
-- Ignore social feeds by default: X/Twitter, Facebook, Instagram, Threads, TikTok, Reddit, LinkedIn, Pinterest, Snapchat, Tumblr and Bluesky. The upgrade migrates 1.2.x per-site switches into the list and keeps explicit social opt-ins.
+- Ignore social feeds by default: X/Twitter, Facebook, Instagram, Threads, TikTok, Reddit, LinkedIn, Pinterest, Snapchat, Tumblr and Bluesky. Upgrading from a development build migrates its per-site switches into the list and keeps explicit social opt-ins.
 - Apply ignore changes to open tabs immediately, and protect already-open tabs after install or update.
 
 ### Autoplay and next episodes
@@ -40,7 +42,11 @@
 - Add `npm run package`, which builds a reproducible `dist/anchor-<version>.zip` containing only extension files, and `scripts/screenshots.cjs` for README images.
 - Add 21 release regression checks covering ignored sites, social and news autoplay, navigation-scoped holds, next episodes, per-player holds and keyboard behavior.
 
-## 1.2.2
+## Development builds
+
+Unpublished builds that preceded 1.0.0.
+
+### Development build 1.2.2
 
 - Disable protection on LinkedIn by default so feed videos do not capture typing shortcuts.
 - Preserve keyboard input in rich text editors, editor wrappers, shadow-root editors, and document editing mode.
@@ -48,11 +54,11 @@
 - Keep deliberate-pause protection and respect settings chosen after the compatibility reset.
 - Add LinkedIn typing and Hulu episode-transition regression coverage.
 
-## 1.2.1
+### Development build 1.2.1
 
 - Apply a black-and-white theme to the popup, help page, buttons, controls, statuses, errors, and keyboard focus.
 
-## 1.2.0
+### Development build 1.2.0
 
 - Add portable development dependencies and Windows/macOS/Linux browser CI.
 - Keep closed shadow-root players discoverable after their host is reattached.
@@ -63,12 +69,12 @@
 - Ignore malformed page commands and handle tabs closing during extension actions.
 - Include the site origin in the toolbar state cache to refresh navigation titles.
 
-## 1.1.1
+### Development build 1.1.1
 
 - Remove the default quick-toggle shortcut that conflicts with Brave.
 - Display the actual assigned shortcut in the popup.
 
-## 1.1.0
+### Development build 1.1.0
 
 - Add automatic HTTP/HTTPS player coverage, embedded players, shadow roots, and media-key support.
 - Add black active icons and gray inactive icons.

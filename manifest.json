@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Anchor",
-  "version": "1.3.0",
+  "version": "1.0.0",
   "description": "Keeps web video and audio paused until you resume, with media-key support, automatic player detection, and ignored sites.",
   "minimum_chrome_version": "119",
   "permissions": [
