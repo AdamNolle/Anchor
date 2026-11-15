@@ -150,17 +150,31 @@ window.restart = id => document.getElementById(id).play().then(() => 'played', e
     await test('Popup switch ignores and restores the current site', async () => {
       await load('https://stream.test/watch/1');
       const pop = await context.newPage(); await page.bringToFront();
-      await pop.goto(`chrome-extension://${extensionId}/popup.html`);
-      await pop.waitForFunction(() => document.querySelector('#hostname').textContent === 'stream.test');
-      await pop.uncheck('#enabled');
-      await wait(async () => (await worker.evaluate(() => chrome.storage.local.get('ignoredSites'))).ignoredSites.includes('stream.test'), 'Not ignored');
-      await wait(async () => (await state()).frames.every(f => !f.enabled), 'Page still protected');
-      assert.equal(await pop.textContent('#state'), 'Ignored');
-      await pop.check('#enabled');
-      await wait(async () => !(await worker.evaluate(() => chrome.storage.local.get('ignoredSites'))).ignoredSites.includes('stream.test'), 'Still ignored');
-      await wait(async () => (await state()).frames.some(f => f.enabled), 'Protection not restored');
-      assert.equal(await pop.locator('#error').isVisible(), false, await pop.textContent('#error'));
-      await pop.close();
+      const ignored = async () => (await worker.evaluate(() => chrome.storage.local.get('ignoredSites'))).ignoredSites;
+      // Slow CI runners (macOS) need a longer budget than local machines.
+      const settle = async (fn, message) => {
+        for (let i = 0; i < 300; i++) { if (await fn()) return; await page.waitForTimeout(50); }
+        assert.fail(`${message}; popup state "${await pop.textContent('#state')}", error "${await pop.textContent('#error')}", ignored ${JSON.stringify(await ignored())}`);
+      };
+      try {
+        await pop.goto(`chrome-extension://${extensionId}/popup.html`);
+        await pop.waitForFunction(() => document.querySelector('#hostname').textContent === 'stream.test' && !document.querySelector('#enabled').disabled);
+        await pop.uncheck('#enabled');
+        // The popup finishes only after the worker has saved the list and updated the tab.
+        await pop.waitForFunction(() => !document.querySelector('#enabled').disabled && document.querySelector('#state').textContent === 'Ignored', null, { timeout: 15000 })
+          .catch(async e => assert.fail(`${e.message}; error "${await pop.textContent('#error')}"`));
+        assert((await ignored()).includes('stream.test'), 'Not ignored');
+        await settle(async () => (await state()).frames.every(f => !f.enabled), 'Page still protected');
+        await pop.check('#enabled');
+        await pop.waitForFunction(() => !document.querySelector('#enabled').disabled && document.querySelector('#state').textContent !== 'Ignored', null, { timeout: 15000 });
+        assert(!(await ignored()).includes('stream.test'), 'Still ignored');
+        await settle(async () => (await state()).frames.some(f => f.enabled), 'Protection not restored');
+        assert.equal(await pop.locator('#error').isVisible(), false, await pop.textContent('#error'));
+      } finally {
+        // Never leave the shared fixture site ignored for later tests.
+        await worker.evaluate(async () => setIgnored((await getIgnored()).filter(h => h !== 'stream.test')));
+        await pop.close();
+      }
     });
     await test('A hold ends when the app navigates to the next title, so it autoplays', async () => {
       await load('https://stream.test/watch/1');
