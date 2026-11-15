@@ -1,6 +1,6 @@
 {
   "name": "anchor-streaming",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "private": true,
   "description": "Keep web streaming players paused until you choose to resume.",
   "license": "MIT",
@@ -9,7 +9,8 @@
   },
   "scripts": {
     "test": "node scripts/test.cjs",
-    "check": "node scripts/check.cjs"
+    "check": "node scripts/check.cjs",
+    "package": "node scripts/package.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

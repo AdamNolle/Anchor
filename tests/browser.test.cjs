@@ -32,7 +32,7 @@ window.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='KeyK')&&!e
   await context.route('https://*.hulu.com/**', route => route.fulfill({ contentType: 'text/html', body: fixture }));
   let worker = context.serviceWorkers()[0];
   if (!worker) worker = await context.waitForEvent('serviceworker');
-  await worker.evaluate(async()=>{await chrome.storage.local.clear();await chrome.storage.session.clear();});
+  await worker.evaluate(async()=>{await chrome.storage.local.clear();await chrome.storage.session.clear();await serialized(registerSites);});
   const extensionId = worker.url().split('/')[2];
   const page = await context.newPage();
   const pageErrors = [];
@@ -48,12 +48,14 @@ window.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='KeyK')&&!e
     for (let i=0;i<40;i++) { if ((await state()).frames.some(f => f.enabled)) return; await new Promise(r=>setTimeout(r,50)); }
     assert.fail('Engine did not initialize');
   }
-  const config = async patch => {
-    await worker.evaluate(async patch => {
+  const config = async ({ enabled, ...patch }) => {
+    await worker.evaluate(async ({ enabled, patch }) => {
       const {sites={}} = await chrome.storage.local.get('sites');
-      sites['https://www.hulu.com'] = { ...PauseKeeperSettings.forOrigin('https://www.hulu.com', sites), ...patch };
+      sites['https://www.hulu.com'] = { ...PauseKeeperSettings.prefs(sites['https://www.hulu.com']), ...patch };
       await chrome.storage.local.set({sites});
-    }, patch);
+      // Protection on/off is the ignored-sites list.
+      if (enabled !== undefined) await setIgnored(enabled ? [] : ['hulu.com']);
+    }, { enabled, patch });
     await page.waitForTimeout(120);
   };
   async function test(name, fn) {
@@ -67,7 +69,7 @@ window.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='KeyK')&&!e
     await test('Click Pause holds against repeated scripted restarts', async()=> {
       await page.click('#toggle');await waitPaused(true);await waitLock(true);
       const attempts=await page.evaluate(async()=>{const out=[];for(let i=0;i<4;i++){try{await video.play();out.push('played');}catch(e){out.push(e.name);}}return out;});
-      assert.deepEqual(attempts,['NotAllowedError','NotAllowedError','NotAllowedError','NotAllowedError']);assert.equal(await paused(),true);
+      assert.deepEqual(attempts,['AbortError','AbortError','AbortError','AbortError']);assert.equal(await paused(),true);
     });
     await test('Explicit Play releases the pause latch',async()=>{await page.click('#toggle');await waitPaused(false);await waitLock(false);});
     await test('Space overrides duplicate website keydown and keyup handlers',async()=> {
@@ -95,9 +97,9 @@ window.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='KeyK')&&!e
     });
     await test('Replacement player is held paused',async()=>{
       const result=await page.evaluate(async src=>{const fresh=document.createElement('video');fresh.id='replacement';fresh.src=src;fresh.style='width:640px;height:360px';video.replaceWith(fresh);try{await fresh.play();return 'played';}catch(e){return e.name;}},source);
-      assert.equal(result,'NotAllowedError');assert.equal(await page.locator('#replacement').evaluate(v=>v.paused),true);
+      assert.equal(result,'AbortError');assert.equal(await page.locator('#replacement').evaluate(v=>v.paused),true);
     });
-    await test('Reload retains the pause latch in session storage',async()=>{await load();await waitLock(true);assert.equal(await paused(),true);assert.equal(await page.evaluate(()=>video.play().then(()=>false,e=>e.name)),'NotAllowedError');});
+    await test('Reload retains the pause latch in session storage',async()=>{await load();await waitLock(true);assert.equal(await paused(),true);assert.equal(await page.evaluate(()=>video.play().then(()=>false,e=>e.name)),'AbortError');});
     await test('Popup Resume releases the latch and plays the primary media',async()=>{
       const id=await tabId();await worker.evaluate(id=>resume(id),id);await waitPaused(false);await waitLock(false);
     });
@@ -106,7 +108,7 @@ window.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='KeyK')&&!e
     });
     await test('Strict pause option catches programmatic pause',async()=>{
       await config({strictPause:true});await page.evaluate(()=>video.pause());await waitLock(true);
-      assert.equal(await page.evaluate(()=>video.play().then(()=>false,e=>e.name)),'NotAllowedError');
+      assert.equal(await page.evaluate(()=>video.play().then(()=>false,e=>e.name)),'AbortError');
       await config({strictPause:false});await worker.evaluate(id=>resume(id),await tabId());await waitPaused(false);
     });
     await test('Autoplay protection starts a fresh page held paused',async()=>{
@@ -115,7 +117,7 @@ window.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='KeyK')&&!e
     });
     await test('Ending media blocks the next autoplay attempt',async()=>{
       await page.evaluate(()=>video.currentTime=video.duration-.1);await waitPaused(true);await waitLock(true);
-      assert.equal(await page.evaluate(()=>video.play().then(()=>false,e=>e.name)),'NotAllowedError');
+      assert.equal(await page.evaluate(()=>video.play().then(()=>false,e=>e.name)),'AbortError');
       await config({blockAutoplay:false});await worker.evaluate(id=>resume(id),await tabId());
     });
     await test('Pause state propagates to newly created permitted iframe',async()=>{
@@ -124,7 +126,7 @@ window.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='KeyK')&&!e
       const frame=await page.waitForEvent('framenavigated',{predicate:f=>f.url().includes('player.hulu.com')}).catch(()=>page.frames().find(f=>f.url().includes('player.hulu.com')));
       await frame.waitForFunction(()=>document.querySelector('video')?.readyState>=2);
       await page.waitForTimeout(300);
-      assert.equal(await frame.evaluate(()=>video.play().then(()=>false,e=>e.name)),'NotAllowedError');
+      assert.equal(await frame.evaluate(()=>video.play().then(()=>false,e=>e.name)),'AbortError');
       assert.equal(await frame.evaluate(()=>video.paused),true);
     });
     await test('Disabling protection restores normal playback',async()=>{
@@ -160,7 +162,7 @@ window.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='KeyK')&&!e
       await config({enabled:true});
       await worker.evaluate(id=>setLock(id,true),await tabId());
       const result=await page.evaluate(async src=>{const host=document.createElement('div');host.id='shadow';document.body.append(host);const root=host.attachShadow({mode:'open'});const player=document.createElement('video');player.src=src;root.append(player);try{await player.play();return 'played';}catch(e){return e.name;}},source);
-      assert.equal(result,'NotAllowedError');await page.evaluate(()=>document.querySelector('#shadow').remove());
+      assert.equal(result,'AbortError');await page.evaluate(()=>document.querySelector('#shadow').remove());
       await worker.evaluate(id=>resume(id),await tabId());await waitPaused(false);
     });
     await test('Pause-when-hidden option latches until explicit resume',async()=>{

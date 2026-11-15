@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Anchor Settings</title><link rel="stylesheet" href="options.css"></head>
+<body>
+  <header><img class="mark" src="icons/anchor.svg" alt=""><div><h1>Anchor settings</h1><p>Your pause. Your call.</p></div></header>
+  <main>
+    <section aria-labelledby="ignored-title">
+      <h2 id="ignored-title">Ignored sites</h2>
+      <p class="hint">Anchor does not run on these sites at all: no pause holds and no keyboard or media-key handling. An entry also covers its subdomains, so <code>example.com</code> includes <code>www.example.com</code> and <code>video.example.com</code>.</p>
+      <form id="add" autocomplete="off" novalidate>
+        <label for="site" class="visually-hidden">Site to ignore</label>
+        <input id="site" type="text" placeholder="example.com or https://example.com/watch" spellcheck="false" aria-describedby="add-error">
+        <button type="submit" class="primary">Ignore site</button>
+      </form>
+      <p id="add-error" class="error" role="alert" hidden></p>
+      <ul id="ignored" class="list" aria-live="polite"></ul>
+      <p id="ignored-empty" class="empty" hidden>No ignored sites. Anchor protects every website.</p>
+    </section>
+    <section aria-labelledby="custom-title">
+      <h2 id="custom-title">Sites with custom preferences</h2>
+      <p class="hint">Playback preferences you changed from the toolbar popup. Reset a site to use the defaults again.</p>
+      <ul id="custom" class="list"></ul>
+      <p id="custom-empty" class="empty" hidden>No sites have custom preferences.</p>
+    </section>
+  </main>
+  <footer><a href="help.html">Setup &amp; troubleshooting</a></footer>
+  <script src="settings.js"></script><script src="options.js"></script>
+</body>
+</html>
