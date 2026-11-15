@@ -1,8 +1,9 @@
 (() => {
   if (globalThis.__pauseKeeperBridge) return;
   globalThis.__pauseKeeperBridge = true;
-  const localIntents = new Set(['user-pause', 'manual-pause', 'user-play', 'manual-play', 'auto-block', 'hidden', 'strict-pause']);
+  const localIntents = new Set(['user-pause', 'manual-pause', 'user-play', 'manual-play', 'auto-block', 'hidden', 'strict-pause', 'navigated']);
   let stateKey = '', recheckPending = false;
+  const box = b => b && [b.x, b.y, b.w, b.h].every(Number.isFinite) ? { x: b.x, y: b.y, w: b.w, h: b.h } : null;
   function send(data) { document.dispatchEvent(new CustomEvent('pause-keeper:command', { detail: JSON.stringify(data) })); }
   async function refresh() {
     try {
@@ -13,20 +14,20 @@
   document.addEventListener('pause-keeper:status', event => {
     try {
       const state = JSON.parse(event.detail);
-      globalThis.__pauseKeeperStatus = { enabled: !!state.enabled, available: !!state.available, playing: !!state.playing, locked: !!state.locked, blocked: Number(state.blocked) || 0, media: Number(state.media) || 0, score: Number(state.score) || 0, error: String(state.error || '').slice(0,180) };
+      globalThis.__pauseKeeperStatus = { enabled: !!state.enabled, available: !!state.available, playing: !!state.playing, locked: !!state.locked, scope: state.scope === 'all' ? 'all' : 'media', blocked: Number(state.blocked) || 0, media: Number(state.media) || 0, score: Number(state.score) || 0, error: String(state.error || '').slice(0,180) };
       const nextKey = `${state.enabled}:${state.available}:${state.media}`;
       if (nextKey !== stateKey) {
         stateKey = nextKey;
         chrome.runtime.sendMessage({ type: 'PK_STATE', state: globalThis.__pauseKeeperStatus }).catch(() => {});
       }
-      if (localIntents.has(state.reason) && state.enabled) chrome.runtime.sendMessage({ type: 'PK_INTENT', locked: !!state.locked }).catch(() => {});
+      if (localIntents.has(state.reason) && state.enabled) chrome.runtime.sendMessage({ type: 'PK_INTENT', locked: !!state.locked, scope: state.scope === 'all' ? 'all' : 'media', slot: box(state.slot), frame: location.href }).catch(() => {});
     } catch { /* Ignore malformed page messages. */ }
   });
   chrome.runtime.onMessage.addListener((message, _sender, reply) => {
     if (message.type === 'PK_REFRESH') { refresh().then(() => reply({ ok: true })); return true; }
     if (message.type === 'PK_COMMAND') { send(message); reply({ ok: true }); }
   });
-  chrome.storage.onChanged.addListener((_changes, area) => { if (area === 'local') refresh(); });
+  chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && (changes.sites || changes.ignoredSites)) refresh(); });
   window.addEventListener('pagehide', () => { chrome.runtime.sendMessage({ type: 'PK_GONE' }).catch(() => {}); });
   window.addEventListener('pageshow', () => { stateKey = ''; refresh(); });
   new MutationObserver(records => {

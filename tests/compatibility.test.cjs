@@ -33,6 +33,7 @@ window.nextEpisode = async () => {
   await context.route(/^https?:\/\//, route => route.fulfill({ contentType: 'text/html', body: fixture }));
   const worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
   await worker.evaluate(() => serialized(initialize));
+  const defaults = await worker.evaluate(() => PauseKeeperSettings.defaultIgnored);
   await worker.evaluate(() => {
     globalThis.testIcons = {};
     const original = chrome.action.setIcon.bind(chrome.action);
@@ -48,24 +49,31 @@ window.nextEpisode = async () => {
   };
   const load = async (url, enabled = true) => {
     await page.goto(url); await page.waitForFunction(() => video.readyState >= 2);
-    await wait(async () => (await state()).frames.some(f => f.enabled === enabled), 'Configuration did not reach page');
+    // Ignored sites do not receive Anchor at all.
+    if (!enabled) { await page.waitForTimeout(300); assert.equal(await page.evaluate(() => !!window.__pauseKeeperEngine), false); return; }
+    await wait(async () => (await state()).frames.some(f => f.enabled), 'Configuration did not reach page');
   };
   const test = async (name, fn) => {
     try { await fn(); results.push({ name, passed: true }); console.log('PASS', name); }
     catch (e) { results.push({ name, passed: false, error: e.stack }); console.error('FAIL', name, e.stack); }
   };
-  const configure = async patch => {
-    await worker.evaluate(async ({ origin, patch }) => {
+  const configure = async ({ enabled, ...patch }) => {
+    await worker.evaluate(async ({ origin, enabled, patch }) => {
       const { sites = {} } = await chrome.storage.local.get('sites');
-      sites[origin] = { ...PauseKeeperSettings.forOrigin(origin, sites), ...patch };
+      sites[origin] = { ...PauseKeeperSettings.prefs(sites[origin]), ...patch };
       await chrome.storage.local.set({ sites });
-    }, { origin: new URL(page.url()).origin, patch });
+      if (enabled !== undefined) {
+        const list = await getIgnored();
+        await setIgnored(enabled ? list.filter(e => !PauseKeeperSettings.isIgnored(origin, [e])) : [...list, new URL(origin).hostname]);
+      }
+    }, { origin: new URL(page.url()).origin, enabled, patch });
     // Broadcast completion confirms the page has applied the saved preferences.
     await worker.evaluate(id => broadcast(id, { type: 'PK_REFRESH' }), await tabId());
   };
   try {
-    await test('Upgrade resets Hulu transition flags and LinkedIn opt-in, preserving unrelated preferences', async () => {
+    await test('Upgrade resets Hulu transition flags and ignores social feeds, preserving unrelated preferences', async () => {
       const stored = await worker.evaluate(async () => serialized(async () => {
+        await chrome.storage.local.remove('ignoredSites');
         await chrome.storage.local.set({ compatibilityVersion: 0, sites: {
           'https://www.hulu.com': { enabled: true, strictPause: true, blockAutoplay: true, fixKeyboard: false },
           'https://www.linkedin.com': { enabled: true, fixKeyboard: false },
@@ -75,12 +83,13 @@ window.nextEpisode = async () => {
           91: 'https://www.hulu.com', 92: 'https://www.linkedin.com', 93: 'https://stream.test'
         } });
         compatibilityReady = null; await migrateCompatibility();
-        return chrome.storage.local.get(['sites', 'compatibilityVersion']);
+        return chrome.storage.local.get(['sites', 'compatibilityVersion', 'ignoredSites']);
       }));
-      assert.equal(stored.compatibilityVersion, 1);
-      assert.deepEqual(stored.sites['https://www.hulu.com'], { enabled: true, strictPause: false, blockAutoplay: false, fixKeyboard: false });
-      assert.deepEqual(stored.sites['https://www.linkedin.com'], { enabled: false, fixKeyboard: false });
-      assert.deepEqual(stored.sites['https://stream.test'], { enabled: true, strictPause: true, blockAutoplay: true });
+      assert.equal(stored.compatibilityVersion, 2);
+      assert.deepEqual(stored.sites['https://www.hulu.com'], { strictPause: false, blockAutoplay: false, fixKeyboard: false, pauseWhenHidden: false });
+      assert.deepEqual(stored.sites['https://www.linkedin.com'], { fixKeyboard: false, blockAutoplay: false, strictPause: false, pauseWhenHidden: false });
+      assert.deepEqual(stored.sites['https://stream.test'], { fixKeyboard: true, strictPause: true, blockAutoplay: true, pauseWhenHidden: false });
+      assert.deepEqual(stored.ignoredSites, defaults);
     });
     await test('Upgrade removes old Hulu and LinkedIn holds without clearing other sites', async () => {
       assert.deepEqual(await worker.evaluate(async () => (await chrome.storage.session.get('tabLocks')).tabLocks), { 93: true });
@@ -96,12 +105,12 @@ window.nextEpisode = async () => {
       assert.deepEqual(await page.evaluate(() => keys), [{ code: 'Space', prevented: false }, { code: 'KeyK', prevented: false }]);
       assert.equal(await page.evaluate(() => video.paused), false); assert.equal((await state()).locked, false);
     });
-    await test('LinkedIn protection-off toolbar icon stays gray', async () => {
+    await test('Ignored LinkedIn toolbar icon stays gray', async () => {
       assert.equal(await worker.evaluate(id => testIcons[id]?.[16], await tabId()), 'icons/16-gray.png');
-      assert.match(await worker.evaluate(id => chrome.action.getTitle({ tabId: id }), await tabId()), /protection off/);
+      await wait(async () => /ignored site/.test(await worker.evaluate(id => chrome.action.getTitle({ tabId: id }), await tabId())), 'Ignored title missing');
     });
     await test('LinkedIn explicit opt-in preserves spaces in its rich text editor', async () => {
-      await configure({ enabled: true, fixKeyboard: true });
+      await configure({ enabled: true, fixKeyboard: true }); await page.waitForTimeout(200);
       await wait(async () => (await state()).available, 'Opt-in failed');
       await page.focus('#editor'); await page.keyboard.type('hello k world');
       assert.equal(await page.locator('#editor').innerText(), 'hello k world');
@@ -145,6 +154,7 @@ window.nextEpisode = async () => {
         const { tabLocks = {}, tabOrigins = {} } = await chrome.storage.session.get(['tabLocks', 'tabOrigins']);
         tabLocks[id] = true; tabOrigins[id] = 'https://www.hulu.com';
         await chrome.storage.session.set({ tabLocks, tabOrigins });
+        await chrome.storage.local.remove('ignoredSites');
         compatibilityReady = null;
         await chrome.storage.local.set({ compatibilityVersion: 0 });
       }), await tabId());
@@ -156,7 +166,7 @@ window.nextEpisode = async () => {
     });
     await test('Hulu deliberate pause still rejects an unwanted restart', async () => {
       await page.click('#pause'); await wait(async () => (await state()).locked, 'Deliberate pause not held');
-      assert.equal(await page.evaluate(() => video.play().then(() => 'played', e => e.name)), 'NotAllowedError');
+      assert.equal(await page.evaluate(() => video.play().then(() => 'played', e => e.name)), 'AbortError');
       await page.click('#play'); await page.waitForFunction(() => !video.paused);
       await wait(async () => !(await state()).locked, 'Play did not release hold');
     });
@@ -165,18 +175,33 @@ window.nextEpisode = async () => {
       await page.evaluate(() => video.currentTime = video.duration - 0.12);
       await page.waitForFunction(() => video.ended);
       await wait(async () => (await state()).locked, 'Optional autoplay blocking failed');
-      assert.equal(await page.evaluate(() => nextEpisode().then(() => 'played', e => e.name)), 'NotAllowedError');
+      assert.equal(await page.evaluate(() => nextEpisode().then(() => 'played', e => e.name)), 'AbortError');
     });
-    await test('Later user opt-ins survive repeated migration with its in-memory cache reset', async () => {
+    await test('Later user choices survive repeated migration with its in-memory cache reset', async () => {
       const stored = await worker.evaluate(async () => serialized(async () => {
         const { sites } = await chrome.storage.local.get('sites'); sites['https://www.hulu.com'].strictPause = true;
-        sites['https://www.linkedin.com'].enabled = true;
-        await chrome.storage.local.set({ sites }); compatibilityReady = null; await migrateCompatibility();
-        return chrome.storage.local.get('sites');
+        await chrome.storage.local.set({ sites, ignoredSites: ['reddit.com'] }); compatibilityReady = null; await migrateCompatibility();
+        return chrome.storage.local.get(['sites', 'ignoredSites']);
       }));
       assert.equal(stored.sites['https://www.hulu.com'].strictPause, true);
       assert.equal(stored.sites['https://www.hulu.com'].blockAutoplay, true);
-      assert.equal(stored.sites['https://www.linkedin.com'].enabled, true);
+      assert.deepEqual(stored.ignoredSites, ['reddit.com']);
+    });
+    await test('Version 1 per-site switches become ignored sites; explicit social opt-ins are kept', async () => {
+      const stored = await worker.evaluate(async () => serialized(async () => {
+        await chrome.storage.local.remove('ignoredSites');
+        await chrome.storage.local.set({ compatibilityVersion: 1, sites: {
+          'https://www.linkedin.com': { enabled: true, fixKeyboard: true }, 'https://www.reddit.com': { enabled: true },
+          'https://www.example.org': { enabled: false, strictPause: true },
+          'http://192.168.1.20:8096': { enabled: false }, 'https://stream.test': { enabled: true, blockAutoplay: true } } });
+        compatibilityReady = null; await migrateCompatibility();
+        return chrome.storage.local.get(['sites', 'ignoredSites', 'compatibilityVersion']);
+      }));
+      assert.equal(stored.compatibilityVersion, 2);
+      assert.deepEqual(stored.ignoredSites, ['192.168.1.20', 'example.org', ...defaults.filter(h => h !== 'linkedin.com' && h !== 'reddit.com')].sort());
+      assert.equal(stored.sites['https://www.example.org'].strictPause, true);
+      assert.equal('enabled' in stored.sites['https://stream.test'], false);
+      assert.equal(stored.sites['https://stream.test'].blockAutoplay, true);
     });
     await test('Compatibility fixtures have no uncaught player errors', async () => assert.deepEqual(errors, []));
   } finally {

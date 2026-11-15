@@ -1,5 +1,52 @@
 # Anchor validation
 
+## Version 1.3.0 release
+
+The full suite passes **108 checks in Windows Chromium on repeated consecutive runs**: playback 24, sites/frames 26, Media Session 10, shortcuts 3, hardening 7, compatibility 17 and the new release suite 21. `npm run check` also validates the manifest, versions, assets, page references, `pageKey` parity between the engine and settings, dynamic content-script registration, and JavaScript syntax.
+
+**Brave 1.99 (Chromium 157):** the Media Session (10) and hardening (7) suites pass, 17/17. Full extension runs pass every check that finishes before the blocker below closes the browser (13 and 32 checks in two runs), with no assertion failures. **Edge 157:** not run.
+
+Cold Turkey Blocker on the development machine closes test-launched Brave and Edge profiles after 2–17 seconds. This happens with or without Anchor loaded, headless or headed, and was reproduced with an idle browser that never loaded the extension. With such software paused, run `ANCHOR_BROWSER="<path to brave.exe or msedge.exe>" npm test`.
+
+### Live sites (Chromium 151, real public pages, no logins)
+
+A manual smoke script loaded the packaged extension against production sites:
+
+- **YouTube:** player detected. K pauses and holds, a scripted restart is rejected with `AbortError`, and K resumes. The site's own Pause/Play buttons hold and release. Pausing, then clicking another video in-app, autoplays the next video with the hold released. This run found the focused-button K bug fixed in this release.
+- **Twitch (live channel):** the site's Pause button holds, a scripted restart is blocked, and Play resumes unmuted.
+- **CBS News, NBC News, The Guardian:** Space scrolls the page, autoplay clips keep their own behavior, and nothing is held.
+- **X, Reddit, Instagram:** ignored by default. No Anchor code is injected and `play()` is native.
+- **Vimeo, CBS News, The Guardian:** identical playback and no renderer crashes with and without Anchor in fresh profiles.
+- No page errors originated from Anchor.
+
+Not verified live: Hulu, Netflix, Disney+, Max, Prime Video and Peacock, which require paid logins. Their URLs are covered by intercepted fixtures only.
+
+### Release suite (21 checks)
+
+- Settings helpers: ignored-site normalization (URLs, wildcards, IPs, IPv6, invalid input), subdomain matching without lookalikes, exclusion patterns, and title identity that ignores hashes, trailing slashes, timestamps, tracking and `ref=` segments.
+- Social feeds are ignored by default. X, Instagram, TikTok and Facebook pages receive no Anchor code (native `play()`), autoplay normally, and show an ignored-site title.
+- The options page rejects invalid and already-covered entries and normalizes URLs. An ignored subdomain receives no code, and removing the entry protects the open page without a reload.
+- The popup switch ignores and restores the current site.
+- In-app navigation to the next title releases a hold and the next video autoplays.
+- Hash and timestamp changes keep a hold, reload keeps it, and a different title clears it.
+- Next episode while held plays the next episode.
+- "Skip intro" inside a `play-pause`-labelled player neither pauses nor holds.
+- Clicking a playing video that only shows controls does not force a pause.
+- Seek-bar clicks keep a hold; the paused player surface resumes.
+- An unrecognized/localized Play button on the player resumes.
+- A site's own K shortcut pressed while its Play button has focus holds and releases.
+- Held `play()` rejects as `AbortError`; a muted-autoplay fallback is not triggered.
+- Detached sound effects play while a video is held.
+- Arrow keys defer to a player that handles them itself.
+- Space scrolls a news page whose only videos are muted autoplay clips.
+- Pausing one news video holds only that video; the other keeps autoplaying.
+- A held clip stays paused after reload while its neighbour autoplays.
+- Popup Keep paused still holds every video in the tab.
+- Stop autoplay holds news clips until each one is started.
+- No uncaught page errors.
+
+Existing suites were updated for `AbortError` rejections, the ignored-sites model, settings v2 migration (per-site switches become ignored entries; explicit social opt-ins are kept), and dynamic registration.
+
 ## Version 1.2.2 compatibility
 
 The full suite passed **86 checks in Windows Chromium and 86 in Windows Brave**, including 16 new compatibility checks. Manifest, assets, package versions, and JavaScript syntax also passed validation.

@@ -36,7 +36,7 @@ const source='data:audio/wav;base64,'+wav.toString('base64');
   await test('A later explicit pause cancels a stale native Play gesture',async page=>{
    await page.locator('#video').click({position:{x:320,y:160}});
    await page.evaluate(()=>document.dispatchEvent(new CustomEvent('pause-keeper:command',{detail:JSON.stringify({command:'lock'})})));
-   assert.equal(await page.evaluate(()=>video.play().then(()=>false,e=>e.name)),'NotAllowedError');
+   assert.equal(await page.evaluate(()=>video.play().then(()=>false,e=>e.name)),'AbortError');
    assert.equal(await page.evaluate(()=>video.paused),true);
   });
   await test('Reattached media keeps only one set of listener registrations',async page=>{
@@ -74,7 +74,7 @@ const source='data:audio/wav;base64,'+wav.toString('base64');
   });
   await test('Pause protection works when Media Session is unavailable',async page=>{
    await page.evaluate(()=>document.dispatchEvent(new CustomEvent('pause-keeper:command',{detail:JSON.stringify({command:'lock'})})));
-   assert.equal(await page.evaluate(()=>video.play().then(()=>false,e=>e.name)),'NotAllowedError');
+   assert.equal(await page.evaluate(()=>video.play().then(()=>false,e=>e.name)),'AbortError');
   },true);
  }finally{
   fs.writeFileSync(path.join(root,'.test-results',process.env.ANCHOR_BROWSER?'brave-hardening-results.json':'hardening-results.json'),JSON.stringify({engine:browser.version(),tests:results},null,2));
